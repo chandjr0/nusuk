@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -20,6 +20,7 @@ export default function InputForm() {
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [computedHash, setComputedHash] = useState("");
 
   const validateField = (name: string, value: string) => {
     switch (name) {
@@ -99,7 +100,7 @@ export default function InputForm() {
     return hours <= 23 && minutes <= 59;
   };
 
-  const getComputedHash = (tracking: string, date: string, time: string): string => {
+  const getHashInput = (tracking: string, date: string, time: string): string => {
     if (!/^\d{10}$/.test(tracking) || !isValidDate(date) || !isValidTime(time)) {
       return "";
     }
@@ -107,7 +108,43 @@ export default function InputForm() {
     return `${tracking}AF${date}${time}${date}${timeWithAddition}`;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toSha256Hex = async (value: string): Promise<string> => {
+    if (!globalThis.crypto?.subtle) {
+      return "";
+    }
+    const encoded = new TextEncoder().encode(value);
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  };
+
+  useEffect(() => {
+    const hashInput = getHashInput(formData.P_tracking, formData.P_Date, formData.P_time);
+    if (!hashInput) {
+      setComputedHash("");
+      return;
+    }
+
+    let isActive = true;
+    toSha256Hex(hashInput)
+      .then((hash) => {
+        if (isActive) {
+          setComputedHash(hash);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setComputedHash("");
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [formData.P_tracking, formData.P_Date, formData.P_time]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate all fields
@@ -126,14 +163,20 @@ export default function InputForm() {
     
     // Calculate time + 20 minutes
     const timeWithAddition = addMinutesToTime(formData.P_time, 20);
-    const computedHash = getComputedHash(formData.P_tracking, formData.P_Date, formData.P_time);
+    const hashInput = getHashInput(formData.P_tracking, formData.P_Date, formData.P_time);
+    if (!hashInput) {
+      return;
+    }
+    const generatedHash = await toSha256Hex(hashInput);
+    if (!generatedHash) {
+      return;
+    }
     
-    // P_hash formula: P_tracking + AF + P_Date + P_time + P_Date + (P_time + 20)
-    const qrString = computedHash;
+    const qrString = `${hashInput}${generatedHash}`;
     
     const cardData = {
       ...formData,
-      P_hash: computedHash,
+      P_hash: generatedHash,
       timeWithAddition,
       qrString,
     };
@@ -146,8 +189,6 @@ export default function InputForm() {
       state: cardData,
     });
   };
-
-  const computedHash = getComputedHash(formData.P_tracking, formData.P_Date, formData.P_time);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#F5F6F8" }}>
@@ -239,11 +280,11 @@ export default function InputForm() {
               id="P_hash"
               name="P_hash"
               value={computedHash}
-              placeholder="Auto-generated from P_tracking + AF + P_Date + P_time + P_Date + (P_time+20)"
+              placeholder="Auto-generated SHA-256 hash"
               readOnly
               className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono text-sm"
             />
-            <p className="text-xs text-gray-500 mt-1">Auto formula: P_tracking + AF + P_Date + P_time + P_Date + (P_time + 20)</p>
+            <p className="text-xs text-gray-500 mt-1">SHA-256 (64 lowercase hex chars) of: P_tracking + AF + P_Date + P_time + P_Date + (P_time + 20)</p>
           </div>
 
           <button
