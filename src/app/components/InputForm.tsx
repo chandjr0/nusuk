@@ -9,15 +9,13 @@ export default function InputForm() {
   const [formData, setFormData] = useState({
     P_Date: "",
     P_time: "",
-    P_tracking: "",
-    P_hash: "",
+    P_tracking: "1142418259",
   });
 
   const [errors, setErrors] = useState({
     P_Date: "",
     P_time: "",
     P_tracking: "",
-    P_hash: "",
   });
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -43,11 +41,6 @@ export default function InputForm() {
       case "P_tracking":
         if (value.length !== 10 || !/^\d{10}$/.test(value)) {
           return "Must be exactly 10 numeric digits";
-        }
-        break;
-      case "P_hash":
-        if (value.length !== 64 || !/^[a-f0-9]{64}$/.test(value)) {
-          return "Must be exactly 64 lowercase hexadecimal characters";
         }
         break;
     }
@@ -95,6 +88,25 @@ export default function InputForm() {
     return String(newHours).padStart(2, "0") + String(newMinutes).padStart(2, "0");
   };
 
+  const isValidDate = (date: string): boolean => /^\d{8}$/.test(date);
+
+  const isValidTime = (time: string): boolean => {
+    if (!/^\d{4}$/.test(time)) {
+      return false;
+    }
+    const hours = parseInt(time.substring(0, 2));
+    const minutes = parseInt(time.substring(2, 4));
+    return hours <= 23 && minutes <= 59;
+  };
+
+  const getComputedHash = (tracking: string, date: string, time: string): string => {
+    if (!/^\d{10}$/.test(tracking) || !isValidDate(date) || !isValidTime(time)) {
+      return "";
+    }
+    const timeWithAddition = addMinutesToTime(time, 20);
+    return `${tracking}AF${date}${time}${date}${timeWithAddition}`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -103,7 +115,6 @@ export default function InputForm() {
       P_Date: validateField("P_Date", formData.P_Date),
       P_time: validateField("P_time", formData.P_time),
       P_tracking: validateField("P_tracking", formData.P_tracking),
-      P_hash: validateField("P_hash", formData.P_hash),
     };
     
     setErrors(newErrors);
@@ -115,12 +126,14 @@ export default function InputForm() {
     
     // Calculate time + 20 minutes
     const timeWithAddition = addMinutesToTime(formData.P_time, 20);
+    const computedHash = getComputedHash(formData.P_tracking, formData.P_Date, formData.P_time);
     
-    // Concatenate in exact order: P_trackingAF P_DateP_timeP_Date(P_time+20)P_hash
-    const qrString = `${formData.P_tracking}AF${formData.P_Date}${formData.P_time}${formData.P_Date}${timeWithAddition}${formData.P_hash}`;
+    // P_hash formula: P_tracking + AF + P_Date + P_time + P_Date + (P_time + 20)
+    const qrString = computedHash;
     
     const cardData = {
       ...formData,
+      P_hash: computedHash,
       timeWithAddition,
       qrString,
     };
@@ -133,6 +146,8 @@ export default function InputForm() {
       state: cardData,
     });
   };
+
+  const computedHash = getComputedHash(formData.P_tracking, formData.P_Date, formData.P_time);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#F5F6F8" }}>
@@ -223,15 +238,12 @@ export default function InputForm() {
               type="text"
               id="P_hash"
               name="P_hash"
-              value={formData.P_hash}
-              onChange={handleChange}
-              placeholder="b698a938ce34f7046aee292ea0da2a82d1b766f0320853a609b1f8c0d3bdaeff"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 font-mono text-sm"
+              value={computedHash}
+              placeholder="Auto-generated from P_tracking + AF + P_Date + P_time + P_Date + (P_time+20)"
+              readOnly
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono text-sm"
             />
-            {errors.P_hash && (
-              <p className="text-red-500 text-xs mt-1">{errors.P_hash}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">64 lowercase hexadecimal characters</p>
+            <p className="text-xs text-gray-500 mt-1">Auto formula: P_tracking + AF + P_Date + P_time + P_Date + (P_time + 20)</p>
           </div>
 
           <button

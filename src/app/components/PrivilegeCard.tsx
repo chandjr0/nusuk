@@ -83,15 +83,15 @@ export default function PrivilegeCard() {
       {/* Close button */}
       <button
         onClick={handleCancel}
-        className="absolute top-6 right-6 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors"
+        className="absolute top-2 right-6 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors md:top-6"
       >
         <X className="w-5 h-5" />
       </button>
 
       {/* Main card container */}
-      <div className="relative flex min-h-screen items-start justify-center p-0 md:items-center md:p-4 md:pt-24 md:pb-24">
+      <div className="relative flex min-h-screen items-start justify-center px-0 pt-10 pb-4 md:items-center md:p-4 md:pt-24 md:pb-24">
         <div 
-          className="w-full max-w-none bg-white p-8 shadow-none rounded-none md:max-w-[420px] md:shadow-xl md:rounded-[28px] md:min-h-0 min-h-screen"
+          className="w-full max-w-none bg-white p-8 shadow-none rounded-none md:max-w-[420px] md:shadow-xl md:rounded-[28px] md:min-h-0"
         >
           {/* Date and Time */}
           <div className="text-center mb-6">
@@ -108,7 +108,7 @@ export default function PrivilegeCard() {
             <div className="bg-white p-4 flex items-center justify-center" style={{ borderRadius: "8px" }}>
               <QRCodeSVG
                 value={state.qrString}
-                size={220}
+                size={176}
                 level="M"
                 includeMargin={false}
               />
@@ -116,7 +116,7 @@ export default function PrivilegeCard() {
           </div>
 
           {/* Tracking Number */}
-          <div className="text-center text-xl font-medium mb-6" style={{ letterSpacing: "0.5px" }}>
+          <div className="text-center text-[21px] font-medium mt-3 mb-6" style={{ letterSpacing: "0.5px" }}>
             {state.P_tracking}
           </div>
 
@@ -127,7 +127,7 @@ export default function PrivilegeCard() {
             >
               <span className="text-lg font-semibold text-gray-700">م</span>
             </div>
-            <span className="text-sm font-medium text-gray-500">You</span>
+            <span className="text-[15px] font-medium text-gray-500">You</span>
           </div>
 
           {/* Message */}
